@@ -20,7 +20,7 @@ contract SignatureVerificationWhitelistTest is Test {
     address public user1 = address(2);
     address public user2 = address(3);
 
-    uint256 private constant PRIVATE_KEY = 0x1234; // Example private key
+    uint256 private constant PRIVATE_KEY = 0x1234;
     address public signer;
 
     function setUp() public {
