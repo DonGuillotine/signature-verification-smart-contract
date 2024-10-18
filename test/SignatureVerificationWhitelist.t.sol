@@ -20,51 +20,57 @@ contract SignatureVerificationWhitelistTest is Test {
     address public user1 = address(2);
     address public user2 = address(3);
 
+    uint256 private constant PRIVATE_KEY = 0x1234; // Example private key
+    address public signer;
+
     function setUp() public {
         vm.startPrank(owner);
         token = new MockERC20();
         verifier = new SignatureVerificationWhitelist(address(token), TOKEN_AMOUNT);
         token.transfer(address(verifier), 1000000 * 10**18);
         vm.stopPrank();
+
+        // Calculate the signer's address from the private key
+        signer = vm.addr(PRIVATE_KEY);
     }
 
     function testClaimTokens() public {
         bytes32 messageHash = keccak256(abi.encodePacked("Claim tokens"));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, messageHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(PRIVATE_KEY, messageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.prank(owner);
-        verifier.updateWhitelist(user1, true);
+        verifier.updateWhitelist(signer, true);
 
-        vm.prank(user1);
+        vm.prank(signer);
         verifier.claimTokens(messageHash, signature);
 
-        assertEq(token.balanceOf(user1), TOKEN_AMOUNT);
+        assertEq(token.balanceOf(signer), TOKEN_AMOUNT);
     }
 
     function testClaimTokensFail_NotWhitelisted() public {
         bytes32 messageHash = keccak256(abi.encodePacked("Claim tokens"));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(2, messageHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(PRIVATE_KEY, messageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.expectRevert("Address not whitelisted");
-        vm.prank(user2);
+        vm.prank(signer);
         verifier.claimTokens(messageHash, signature);
     }
 
     function testClaimTokensFail_AlreadyClaimed() public {
         bytes32 messageHash = keccak256(abi.encodePacked("Claim tokens"));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, messageHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(PRIVATE_KEY, messageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.prank(owner);
-        verifier.updateWhitelist(user1, true);
+        verifier.updateWhitelist(signer, true);
 
-        vm.prank(user1);
+        vm.prank(signer);
         verifier.claimTokens(messageHash, signature);
 
         vm.expectRevert("Tokens already claimed");
-        vm.prank(user1);
+        vm.prank(signer);
         verifier.claimTokens(messageHash, signature);
     }
 
